@@ -21,15 +21,60 @@ partial class Bluetooth
 
     private static async Task Initialize()
     {
-        if(Adapter == null)
+        if (Adapter == null)
         {
-            Adapter = (await BlueZManager.GetAdaptersAsync()).FirstOrDefault();
+            Adapter = await ResolveAdapterAsync();
 
             if (Adapter == null)
                 throw new PlatformNotSupportedException("No Bluetooth adapter present.");
-                
+
             Adapter.DeviceFound += Adapter_DeviceFound;
         }
+    }
+
+    internal static bool LinuxAdapterLenientFallback;
+
+    private static async Task<Adapter?> ResolveAdapterAsync()
+    {
+        var wanted = string.IsNullOrWhiteSpace(Bluetooth.LinuxAdapter)
+            ? Environment.GetEnvironmentVariable("INTHEHAND_LINUX_ADAPTER")
+            : Bluetooth.LinuxAdapter;
+
+        if (!string.IsNullOrWhiteSpace(wanted))
+        {
+            var name = wanted.Trim();
+            try
+            {
+                return await BlueZManager.GetAdapterAsync(name);
+            }
+            catch (Exception ex)
+            {
+                if (!LinuxAdapterLenientFallback)
+                    throw new PlatformNotSupportedException(
+                        $"Requested Bluetooth adapter '{name}' not found.", ex);
+                System.Diagnostics.Debug.WriteLine(
+                    $"InTheHand: requested adapter '{name}' not found; falling back to first available.");
+            }
+        }
+
+        return (await BlueZManager.GetAdaptersAsync()).FirstOrDefault();
+    }
+
+    private static async Task<IReadOnlyList<BluetoothAdapterInfo>> PlatformGetAdapters()
+    {
+        var adapters = await BlueZManager.GetAdaptersAsync();
+        var result = new List<BluetoothAdapterInfo>(adapters.Count);
+        foreach (var a in adapters)
+        {
+            result.Add(new BluetoothAdapterInfo
+            {
+                Name = a.ObjectPath.ToString(),
+                Address = await a.GetAddressAsync(),
+                Alias = await a.GetAliasAsync(),
+                Powered = await a.GetPoweredAsync(),
+            });
+        }
+        return result;
     }
 
     private static async Task Adapter_DeviceFound(Adapter sender, DeviceFoundEventArgs eventArgs)
@@ -68,7 +113,7 @@ partial class Bluetooth
 
     private static void RemoveWithAddress(List<BluetoothDevice> devices, string address)
     {
-        for(var i = devices.Count-1; i >=0; i--)
+        for (var i = devices.Count - 1; i >= 0; i--)
         {
             if (devices[i].Id == address)
             {
@@ -103,7 +148,7 @@ partial class Bluetooth
         Adapter.DeviceFound += handler;
 
         var timeout = options?.Timeout ?? TimeSpan.FromMilliseconds(30000);
-            
+
         Task.Run(async () =>
         {
             try
@@ -113,7 +158,7 @@ partial class Bluetooth
                 await Adapter.StopDiscoveryAsync();
                 result.TrySetResult(devices);
             }
-            catch (TaskCanceledException) 
+            catch (TaskCanceledException)
             {
                 await Adapter.StopDiscoveryAsync();
                 result.TrySetResult(devices); // if cancelled, return the devices found so far
@@ -131,12 +176,12 @@ partial class Bluetooth
     {
         await Initialize();
         var bluetoothDevices = new List<BluetoothDevice>();
-                
+
         var devices = await Adapter.GetDevicesAsync();
 
-        if(devices is { Count: > 0 })
+        if (devices is { Count: > 0 })
         {
-            foreach(var device in devices)
+            foreach (var device in devices)
             {
                 var bluetoothDevice = (BluetoothDevice)device;
                 await bluetoothDevice.Init();

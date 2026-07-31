@@ -22,6 +22,23 @@ namespace InTheHand.Bluetooth
     {
         private static bool _oldAvailability;
 
+        private static string? _linuxAdapter;
+
+        /// <summary>
+        /// Linux only: the BlueZ adapter to use (e.g. <c>"hci1"</c>, or the full D-Bus
+        /// path <c>"/org/bluez/hci1"</c>). Ignored on other platforms.
+        /// Must be set BEFORE the first call that initializes the radio
+        /// (GetAvailabilityAsync / RequestLEScanAsync / ScanForDevicesAsync); setting it
+        /// later has no effect - the adapter is resolved once.
+        /// Precedence: this property &gt; the INTHEHAND_LINUX_ADAPTER env var &gt; the
+        /// historical default (first available adapter).
+        /// </summary>
+        public static string? LinuxAdapter
+        {
+            get => _linuxAdapter;
+            set => _linuxAdapter = value;
+        }
+
         /// <summary>
         /// Returns true if Bluetooth is physically available and user has given the app permission.
         /// </summary>
@@ -136,5 +153,7 @@ namespace InTheHand.Bluetooth
             if (value.Length > 512)
                 throw new ArgumentOutOfRangeException(nameof(value), "Value cannot be larger than 512 bytes.");
         }
+
+        public static Task<IReadOnlyList<BluetoothAdapterInfo>> GetAdaptersAsync() => PlatformGetAdapters();
     }
 }
