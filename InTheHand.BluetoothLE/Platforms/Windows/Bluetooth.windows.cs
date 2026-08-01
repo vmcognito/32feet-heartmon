@@ -50,6 +50,25 @@ namespace InTheHand.Bluetooth
             return radio;
         }
 
+        private static async Task<IReadOnlyList<BluetoothAdapterInfo>> PlatformGetAdapters()
+        {
+            var a = await GetAdapter();
+            if (a == null)
+                return new List<BluetoothAdapterInfo>().AsReadOnly();
+
+            var r = await GetRadio();
+            return new BluetoothAdapterInfo[]
+            {
+                new BluetoothAdapterInfo
+                {
+                    Name = r?.Name ?? "Bluetooth",
+                    Address = a.BluetoothAddress.ToString("X12"),
+                    Alias = r?.Name ?? "Bluetooth",
+                    Powered = r != null && r.State == RadioState.On,
+                }
+            }.AsReadOnly();
+        }
+
         static async Task<bool> PlatformGetAvailability()
         {
             if(await GetAdapter() != null)

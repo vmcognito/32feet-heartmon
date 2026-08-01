@@ -1,0 +1,16 @@
+<Project>
+  <!-- Local build override (evaluated AFTER project body): build only the
+       Linux-compatible TFMs and skip assembly signing. Safe to delete. -->
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net9.0;net9.0-windows10.0.19041.0</TargetFrameworks>
+    <SignAssembly>false</SignAssembly>
+    <AssemblyOriginatorKeyFile></AssemblyOriginatorKeyFile>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <!-- Polyfill C# compiler attributes (IsExternalInit, required, etc.) for older TFMs
+       so the heartmon fork's record/init/required types compile on netstandard2.0 -->
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="PolySharp" Version="1.15.0" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

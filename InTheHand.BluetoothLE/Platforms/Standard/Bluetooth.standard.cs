@@ -39,6 +39,11 @@ namespace InTheHand.Bluetooth
             return Task.FromException<BluetoothLEScan>(new PlatformNotSupportedException());
         }
 
+        private static Task<IReadOnlyList<BluetoothAdapterInfo>> PlatformGetAdapters()
+        {
+            return Task.FromException<IReadOnlyList<BluetoothAdapterInfo>>(new PlatformNotSupportedException());
+        }
+
         private static void AddAvailabilityChanged()
         {
         }
